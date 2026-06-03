@@ -1,6 +1,8 @@
 use crate::models::config::ServerConfig;
-use std::net::TcpListener;
+use std::net::{TcpListener, TcpStream};
 use std::collections::HashSet;
+use std::time::Duration;
+use std::net::ToSocketAddrs;
 
 pub struct PortChecker;
 
@@ -38,6 +40,16 @@ impl PortChecker {
         }
         
         Ok(warnings)
+    }
+
+    pub fn check_health(host: &str, port: u16) -> bool {
+        let addr = format!("{}:{}", host, port);
+        if let Ok(mut addrs) = addr.to_socket_addrs() {
+            if let Some(sock_addr) = addrs.next() {
+                return TcpStream::connect_timeout(&sock_addr, Duration::from_secs(1)).is_ok();
+            }
+        }
+        false
     }
 }
 
@@ -104,5 +116,18 @@ mod tests {
         let res = PortChecker::validate_server(&server);
         assert!(res.is_err());
         assert!(res.unwrap_err().contains("Duplicate"));
+    }
+
+    #[test]
+    fn test_check_health() {
+        // Start a local listener and check health
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let port = listener.local_addr().unwrap().port();
+        
+        assert!(PortChecker::check_health("127.0.0.1", port));
+        
+        // Pick an unused port for failure test
+        // There is a slight chance it's used, but practically it's fine for simple test
+        assert!(!PortChecker::check_health("127.0.0.1", port + 1));
     }
 }

@@ -32,6 +32,8 @@ export type ServerConfig = {
   tunnels: TunnelConfig[]
 }
 
+export type FailureReason = "portOccupied" | "sshMissing" | "hostKeyIssue" | "connectionFailed" | "unknown";
+
 export type ServerRuntimeStatus = {
   serverId: string
   status: "stopped" | "starting" | "running" | "stopping" | "error" | "reconnecting"
@@ -40,5 +42,6 @@ export type ServerRuntimeStatus = {
   uptimeSec: number
   restartCount: number
   lastError?: string
+  failureReason?: FailureReason
   activeTunnelCount: number
 }

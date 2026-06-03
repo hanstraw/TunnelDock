@@ -1,5 +1,5 @@
 use crate::models::config::ServerConfig;
-use crate::models::status::{ServerRuntimeStatus, Status};
+use crate::models::status::{ServerRuntimeStatus, Status, FailureReason};
 use crate::core::ssh_command_builder::SshCommandBuilder;
 use crate::core::log_store::LogStore;
 use std::collections::HashMap;
@@ -13,6 +13,19 @@ use tokio::io::{AsyncBufReadExt, BufReader};
 pub struct ManagedProcess {
     pub status: ServerRuntimeStatus,
     pub stop_tx: Option<oneshot::Sender<()>>,
+}
+
+fn detect_failure_reason(line: &str) -> Option<FailureReason> {
+    let lower = line.to_lowercase();
+    if lower.contains("address already in use") || lower.contains("bind: address") || lower.contains("cannot listen to port") {
+        Some(FailureReason::PortOccupied)
+    } else if lower.contains("host key verification failed") || lower.contains("offending key") || lower.contains("strict checking") {
+        Some(FailureReason::HostKeyIssue)
+    } else if lower.contains("connection refused") || lower.contains("network is unreachable") || lower.contains("connection timed out") {
+        Some(FailureReason::ConnectionFailed)
+    } else {
+        None
+    }
 }
 
 #[derive(Clone)]
@@ -48,6 +61,7 @@ impl ProcessManager {
             uptime_sec: 0,
             restart_count: 0,
             last_error: None,
+            failure_reason: None,
             active_tunnel_count: active_tunnels,
         };
 
@@ -104,11 +118,17 @@ impl ProcessManager {
                 Ok(c) => c,
                 Err(e) => {
                     let err_msg = format!("Failed to spawn: {}", e);
+                    let reason = if e.kind() == std::io::ErrorKind::NotFound {
+                        Some(FailureReason::SshMissing)
+                    } else {
+                        Some(FailureReason::Unknown)
+                    };
                     log_store.append_log(&server_id, err_msg.clone()).await;
                     let mut p = procs.lock().await;
                     if let Some(proc) = p.get_mut(&server_id) {
                         proc.status.status = Status::Error;
                         proc.status.last_error = Some(err_msg);
+                        proc.status.failure_reason = reason;
                     }
                     // Wait before retry if auto_reconnect
                     if server.auto_reconnect {
@@ -148,8 +168,15 @@ impl ProcessManager {
             let log_store_out = log_store.clone();
             let server_id_out = server_id.clone();
             let mut stdout_reader = BufReader::new(stdout).lines();
+            let procs_out = procs.clone();
             tokio::spawn(async move {
                 while let Ok(Some(line)) = stdout_reader.next_line().await {
+                    if let Some(reason) = detect_failure_reason(&line) {
+                        let mut p = procs_out.lock().await;
+                        if let Some(proc) = p.get_mut(&server_id_out) {
+                            proc.status.failure_reason = Some(reason);
+                        }
+                    }
                     log_store_out.append_log(&server_id_out, line).await;
                 }
             });
@@ -157,8 +184,15 @@ impl ProcessManager {
             let log_store_err = log_store.clone();
             let server_id_err = server_id.clone();
             let mut stderr_reader = BufReader::new(stderr).lines();
+            let procs_err = procs.clone();
             tokio::spawn(async move {
                 while let Ok(Some(line)) = stderr_reader.next_line().await {
+                    if let Some(reason) = detect_failure_reason(&line) {
+                        let mut p = procs_err.lock().await;
+                        if let Some(proc) = p.get_mut(&server_id_err) {
+                            proc.status.failure_reason = Some(reason);
+                        }
+                    }
                     log_store_err.append_log(&server_id_err, line).await;
                 }
             });

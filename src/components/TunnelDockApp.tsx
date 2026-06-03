@@ -4,6 +4,10 @@ import { ServerHeader } from './ServerHeader';
 import { TunnelTable } from './TunnelTable';
 import { TauriApi } from '../api/tauri';
 import { ServerConfig, ServerRuntimeStatus } from '../types/server';
+import { TunnelConfig } from '../types/tunnel';
+import { ConfirmDialog } from './ConfirmDialog';
+import { ServerEditDialog } from './ServerEditDialog';
+import { TunnelEditDialog } from './TunnelEditDialog';
 
 export const TunnelDockApp: React.FC = () => {
   const [servers, setServers] = useState<ServerConfig[]>([]);
@@ -11,10 +15,23 @@ export const TunnelDockApp: React.FC = () => {
   const [statuses, setStatuses] = useState<Record<string, ServerRuntimeStatus>>({});
   const [activeTab, setActiveTab] = useState<'tunnels' | 'info' | 'logs'>('tunnels');
   const [logs, setLogs] = useState<string[]>([]);
+  const [theme, setTheme] = useState<'system' | 'light' | 'dark'>('system');
+
+  const [showServerEdit, setShowServerEdit] = useState(false);
+  const [editingServer, setEditingServer] = useState<ServerConfig | undefined>();
+  
+  const [showTunnelEdit, setShowTunnelEdit] = useState(false);
+  const [editingTunnel, setEditingTunnel] = useState<TunnelConfig | undefined>();
+
+  const [confirmDelete, setConfirmDelete] = useState<{type: 'server' | 'tunnel', item: any} | null>(null);
 
   useEffect(() => {
     loadServers();
   }, []);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
 
   const loadServers = async () => {
     try {
@@ -37,7 +54,9 @@ export const TunnelDockApp: React.FC = () => {
   const loadStatus = async (serverId: string) => {
     try {
       const status = await TauriApi.getServerStatus(serverId);
-      setStatuses(prev => ({ ...prev, [serverId]: status }));
+      if (status) {
+        setStatuses(prev => ({ ...prev, [serverId]: status }));
+      }
     } catch (err) {
       console.error('Failed to load status for', serverId, err);
     }
@@ -66,8 +85,54 @@ export const TunnelDockApp: React.FC = () => {
 
   const handleDelete = async () => {
     if (!selectedServerId) return;
-    await TauriApi.deleteServer(selectedServerId);
+    setConfirmDelete({ type: 'server', item: selectedServer });
+  };
+
+  const executeDeleteServer = async (server: ServerConfig) => {
+    await TauriApi.deleteServer(server.id);
     setSelectedServerId(undefined);
+    loadServers();
+    setConfirmDelete(null);
+  };
+
+  const handleSaveServer = async (server: ServerConfig) => {
+    if (editingServer) {
+      await TauriApi.updateServer(server);
+    } else {
+      await TauriApi.createServer(server);
+      setSelectedServerId(server.id);
+    }
+    setShowServerEdit(false);
+    setEditingServer(undefined);
+    loadServers();
+  };
+
+  const handleSaveTunnel = async (tunnel: TunnelConfig) => {
+    if (!selectedServer) return;
+    const updatedServer = { ...selectedServer };
+    if (editingTunnel) {
+      updatedServer.tunnels = updatedServer.tunnels.map(t => t.id === tunnel.id ? tunnel : t);
+    } else {
+      updatedServer.tunnels = [...updatedServer.tunnels, tunnel];
+    }
+    await TauriApi.updateServer(updatedServer);
+    setShowTunnelEdit(false);
+    setEditingTunnel(undefined);
+    loadServers();
+  };
+
+  const executeDeleteTunnel = async (tunnel: TunnelConfig) => {
+    if (!selectedServer) return;
+    const updatedServer = { ...selectedServer, tunnels: selectedServer.tunnels.filter(t => t.id !== tunnel.id) };
+    await TauriApi.updateServer(updatedServer);
+    loadServers();
+    setConfirmDelete(null);
+  };
+
+  const handleToggleTunnel = async (tunnelId: string, enabled: boolean) => {
+    if (!selectedServer) return;
+    const updatedServer = { ...selectedServer, tunnels: selectedServer.tunnels.map(t => t.id === tunnelId ? { ...t, enabled } : t) };
+    await TauriApi.updateServer(updatedServer);
     loadServers();
   };
 
@@ -131,14 +196,24 @@ export const TunnelDockApp: React.FC = () => {
           servers={servers} 
           selectedServerId={selectedServerId}
           onSelectServer={(s) => setSelectedServerId(s.id)} 
-          onAddServer={() => {}} 
+          onAddServer={() => {
+            setEditingServer(undefined);
+            setShowServerEdit(true);
+          }} 
         />
         <div style={{ padding: '10px', display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #ccc' }}>
           <button onClick={handleImport}>Import</button>
           <button onClick={handleExport}>Export</button>
         </div>
+        <div style={{ padding: '10px', borderTop: '1px solid #ccc', display: 'flex', justifyContent: 'center' }}>
+          <select value={theme} onChange={(e) => setTheme(e.target.value as any)}>
+            <option value="system">System</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </div>
       </div>
-      <div style={{ flex: 1, padding: '20px', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ flex: 1, padding: '20px', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
         {selectedServer ? (
           <>
             <ServerHeader 
@@ -148,6 +223,10 @@ export const TunnelDockApp: React.FC = () => {
               onStop={handleStop}
               onRestart={handleRestart}
               onDelete={handleDelete}
+              onEdit={() => {
+                setEditingServer(selectedServer);
+                setShowServerEdit(true);
+              }}
             />
             <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', flex: 1 }}>
               <div className="tabs" style={{ marginBottom: '10px' }}>
@@ -159,10 +238,16 @@ export const TunnelDockApp: React.FC = () => {
               {activeTab === 'tunnels' && (
                 <TunnelTable 
                   tunnels={selectedServer.tunnels || []} 
-                  onAdd={() => {}} 
-                  onEdit={() => {}} 
-                  onDelete={() => {}} 
-                  onToggle={() => {}} 
+                  onAdd={() => {
+                    setEditingTunnel(undefined);
+                    setShowTunnelEdit(true);
+                  }} 
+                  onEdit={(tunnel) => {
+                    setEditingTunnel(tunnel);
+                    setShowTunnelEdit(true);
+                  }} 
+                  onDelete={(tunnel) => setConfirmDelete({ type: 'tunnel', item: tunnel })} 
+                  onToggle={handleToggleTunnel} 
                   onOpenUrl={(url) => TauriApi.openUrl(url)}
                 />
               )}
@@ -191,6 +276,31 @@ export const TunnelDockApp: React.FC = () => {
           <div>Select a server from the sidebar to view its details.</div>
         )}
       </div>
+
+      {showServerEdit && (
+        <ServerEditDialog 
+          server={editingServer} 
+          onSave={handleSaveServer} 
+          onCancel={() => setShowServerEdit(false)} 
+        />
+      )}
+
+      {showTunnelEdit && (
+        <TunnelEditDialog 
+          tunnel={editingTunnel} 
+          onSave={handleSaveTunnel} 
+          onCancel={() => setShowTunnelEdit(false)} 
+        />
+      )}
+
+      {confirmDelete && (
+        <ConfirmDialog 
+          title={`Delete ${confirmDelete.type}`}
+          message={`Are you sure you want to delete this ${confirmDelete.type}?`}
+          onConfirm={() => confirmDelete.type === 'server' ? executeDeleteServer(confirmDelete.item) : executeDeleteTunnel(confirmDelete.item)}
+          onCancel={() => setConfirmDelete(null)}
+        />
+      )}
     </div>
   );
 };

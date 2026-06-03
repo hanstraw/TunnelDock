@@ -96,21 +96,100 @@ button {
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root[data-theme="system"] {
     color: #f6f6f6;
     background-color: #2f2f2f;
   }
-
-  a:hover {
-    color: #24c8db;
-  }
-
-  input,
-  button {
+  :root[data-theme="system"] input,
+  :root[data-theme="system"] button {
     color: #ffffff;
     background-color: #0f0f0f98;
   }
-  button:active {
-    background-color: #0f0f0f69;
+}
+
+:root[data-theme="dark"] {
+  color: #f6f6f6;
+  background-color: #2f2f2f;
+}
+:root[data-theme="dark"] input,
+:root[data-theme="dark"] button {
+  color: #ffffff;
+  background-color: #0f0f0f98;
+}
+
+:root[data-theme="light"] {
+  color: #0f0f0f;
+  background-color: #f6f6f6;
+}
+:root[data-theme="light"] input,
+:root[data-theme="light"] button {
+  color: #0f0f0f;
+  background-color: #ffffff;
+}
+
+.dialog-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.dialog {
+  background: inherit;
+  padding: 20px;
+  border-radius: 8px;
+  min-width: 300px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  background-color: var(--dialog-bg, #fff);
+  color: var(--dialog-text, #000);
+}
+:root[data-theme="dark"] .dialog,
+:root[data-theme="system"] .dialog {
+  background-color: #3f3f3f;
+  color: #fff;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="system"] .dialog {
+    background-color: #3f3f3f;
+    color: #fff;
   }
 }
+@media (prefers-color-scheme: light) {
+  :root[data-theme="system"] .dialog {
+    background-color: #fff;
+    color: #000;
+  }
+}
+:root[data-theme="light"] .dialog {
+  background-color: #fff;
+  color: #000;
+}
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+.form-group {
+  margin-bottom: 15px;
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+.form-group.checkbox {
+  flex-direction: row;
+  align-items: center;
+}
+.form-group label {
+  margin-bottom: 5px;
+}
+button.danger {
+  background-color: #dc3545;
+  color: white;
+}
+button.danger:hover {
+  background-color: #c82333;
+}
+
