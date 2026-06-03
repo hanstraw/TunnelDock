@@ -12,6 +12,11 @@ vi.mock('../api/tauri', () => ({
     restartServer: vi.fn(),
     deleteServer: vi.fn(),
     saveServer: vi.fn(),
+    getLogs: vi.fn(),
+    clearLogs: vi.fn(),
+    getConfig: vi.fn(),
+    saveConfig: vi.fn(),
+    openUrl: vi.fn(),
   }
 }));
 

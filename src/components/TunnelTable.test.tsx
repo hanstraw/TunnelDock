@@ -13,11 +13,21 @@ const mockTunnels: TunnelConfig[] = [
     remoteHost: '127.0.0.1',
     remotePort: 80,
   },
+  {
+    id: 't2',
+    name: 'Panel 2',
+    enabled: true,
+    localHost: '127.0.0.1',
+    localPort: 9090,
+    remoteHost: '127.0.0.1',
+    remotePort: 90,
+    openUrl: 'http://localhost:9090',
+  }
 ];
 
 describe('TunnelTable', () => {
   it('renders a list of tunnels', () => {
-    render(<TunnelTable tunnels={mockTunnels} onAdd={() => {}} onEdit={() => {}} onDelete={() => {}} onToggle={() => {}} />);
+    render(<TunnelTable tunnels={mockTunnels} onAdd={() => {}} onEdit={() => {}} onDelete={() => {}} onToggle={() => {}} onOpenUrl={() => {}} />);
     expect(screen.getByText('Panel')).toBeInTheDocument();
     expect(screen.getByText('127.0.0.1:8080')).toBeInTheDocument();
     expect(screen.getByText('127.0.0.1:80')).toBeInTheDocument();
@@ -25,7 +35,7 @@ describe('TunnelTable', () => {
 
   it('calls onAdd when Add Tunnel is clicked', () => {
     const handleAdd = vi.fn();
-    render(<TunnelTable tunnels={mockTunnels} onAdd={handleAdd} onEdit={() => {}} onDelete={() => {}} onToggle={() => {}} />);
+    render(<TunnelTable tunnels={mockTunnels} onAdd={handleAdd} onEdit={() => {}} onDelete={() => {}} onToggle={() => {}} onOpenUrl={() => {}} />);
     fireEvent.click(screen.getByText('Add Tunnel'));
     expect(handleAdd).toHaveBeenCalled();
   });
@@ -33,12 +43,23 @@ describe('TunnelTable', () => {
   it('calls onEdit and onDelete when buttons are clicked', () => {
     const handleEdit = vi.fn();
     const handleDelete = vi.fn();
-    render(<TunnelTable tunnels={mockTunnels} onAdd={() => {}} onEdit={handleEdit} onDelete={handleDelete} onToggle={() => {}} />);
+    render(<TunnelTable tunnels={mockTunnels} onAdd={() => {}} onEdit={handleEdit} onDelete={handleDelete} onToggle={() => {}} onOpenUrl={() => {}} />);
     
-    fireEvent.click(screen.getByText('Edit'));
+    const editBtns = screen.getAllByText('Edit');
+    fireEvent.click(editBtns[0]);
     expect(handleEdit).toHaveBeenCalledWith(mockTunnels[0]);
 
-    fireEvent.click(screen.getByText('Delete'));
+    const delBtns = screen.getAllByText('Delete');
+    fireEvent.click(delBtns[0]);
     expect(handleDelete).toHaveBeenCalledWith(mockTunnels[0]);
+  });
+
+  it('calls onOpenUrl when Open button is clicked', () => {
+    const handleOpen = vi.fn();
+    render(<TunnelTable tunnels={mockTunnels} onAdd={() => {}} onEdit={() => {}} onDelete={() => {}} onToggle={() => {}} onOpenUrl={handleOpen} />);
+    
+    const openBtn = screen.getByText('Open');
+    fireEvent.click(openBtn);
+    expect(handleOpen).toHaveBeenCalledWith('http://localhost:9090');
   });
 });

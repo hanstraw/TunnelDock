@@ -34,8 +34,9 @@ mod tests {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let log_store = Arc::new(crate::core::log_store::LogStore::new());
     let config_store = Arc::new(Mutex::new(ConfigStore::new()));
-    let process_manager = ProcessManager::new();
+    let process_manager = ProcessManager::new(log_store.clone());
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
@@ -46,6 +47,7 @@ pub fn run() {
         .manage(AppState {
             config_store: config_store.clone(),
             process_manager: process_manager.clone(),
+            log_store: log_store.clone(),
         })
         .setup(move |app| {
             // Read config
@@ -191,7 +193,12 @@ pub fn run() {
             start_server,
             stop_server,
             restart_server,
-            get_runtime_status
+            get_runtime_status,
+            get_logs,
+            clear_logs,
+            check_local_port,
+            open_url,
+            validate_server
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

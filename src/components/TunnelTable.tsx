@@ -7,9 +7,10 @@ interface TunnelTableProps {
   onEdit: (tunnel: TunnelConfig) => void;
   onDelete: (tunnel: TunnelConfig) => void;
   onToggle: (tunnelId: string, enabled: boolean) => void;
+  onOpenUrl: (url: string) => void;
 }
 
-export const TunnelTable: React.FC<TunnelTableProps> = ({ tunnels, onAdd, onEdit, onDelete, onToggle }) => {
+export const TunnelTable: React.FC<TunnelTableProps> = ({ tunnels, onAdd, onEdit, onDelete, onToggle, onOpenUrl }) => {
   return (
     <div className="tunnel-table-container">
       <div className="table-header">
@@ -42,6 +43,7 @@ export const TunnelTable: React.FC<TunnelTableProps> = ({ tunnels, onAdd, onEdit
               <td>
                 <button onClick={() => onEdit(tunnel)}>Edit</button>
                 <button onClick={() => onDelete(tunnel)} className="danger">Delete</button>
+                {tunnel.openUrl && <button onClick={() => onOpenUrl(tunnel.openUrl!)}>Open</button>}
               </td>
             </tr>
           ))}

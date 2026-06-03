@@ -1,5 +1,18 @@
 import { TunnelConfig } from './tunnel'
 
+export type AppConfig = {
+  startMinimized: boolean;
+  closeToTray: boolean;
+  launchAtLogin: boolean;
+  theme: string;
+};
+
+export type ConfigFile = {
+  version: number;
+  app: AppConfig;
+  servers: ServerConfig[];
+};
+
 export type ServerConfig = {
   id: string
   name: string

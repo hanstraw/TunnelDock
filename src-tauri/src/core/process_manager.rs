@@ -1,12 +1,14 @@
 use crate::models::config::ServerConfig;
 use crate::models::status::{ServerRuntimeStatus, Status};
 use crate::core::ssh_command_builder::SshCommandBuilder;
+use crate::core::log_store::LogStore;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{Mutex, oneshot};
 use tokio::process::Command;
 use chrono::Utc;
 use std::process::Stdio;
+use tokio::io::{AsyncBufReadExt, BufReader};
 
 pub struct ManagedProcess {
     pub status: ServerRuntimeStatus,
@@ -16,12 +18,14 @@ pub struct ManagedProcess {
 #[derive(Clone)]
 pub struct ProcessManager {
     processes: Arc<Mutex<HashMap<String, ManagedProcess>>>,
+    log_store: Arc<LogStore>,
 }
 
 impl ProcessManager {
-    pub fn new() -> Self {
+    pub fn new(log_store: Arc<LogStore>) -> Self {
         Self {
             processes: Arc::new(Mutex::new(HashMap::new())),
+            log_store,
         }
     }
 
@@ -56,15 +60,16 @@ impl ProcessManager {
 
         let procs_clone = self.processes.clone();
         let server_clone = server.clone();
+        let log_store_clone = self.log_store.clone();
         
         tokio::spawn(async move {
-            Self::run_process_loop(procs_clone, server_clone, stop_rx).await;
+            Self::run_process_loop(procs_clone, server_clone, stop_rx, log_store_clone).await;
         });
 
         Ok(())
     }
 
-    async fn run_process_loop(procs: Arc<Mutex<HashMap<String, ManagedProcess>>>, server: ServerConfig, mut stop_rx: oneshot::Receiver<()>) {
+    async fn run_process_loop(procs: Arc<Mutex<HashMap<String, ManagedProcess>>>, server: ServerConfig, mut stop_rx: oneshot::Receiver<()>, log_store: Arc<LogStore>) {
         let server_id = server.id.clone();
         let mut restart_count = 0;
 
@@ -98,10 +103,12 @@ impl ProcessManager {
             let mut child = match spawn_result {
                 Ok(c) => c,
                 Err(e) => {
+                    let err_msg = format!("Failed to spawn: {}", e);
+                    log_store.append_log(&server_id, err_msg.clone()).await;
                     let mut p = procs.lock().await;
                     if let Some(proc) = p.get_mut(&server_id) {
                         proc.status.status = Status::Error;
-                        proc.status.last_error = Some(format!("Failed to spawn: {}", e));
+                        proc.status.last_error = Some(err_msg);
                     }
                     // Wait before retry if auto_reconnect
                     if server.auto_reconnect {
@@ -134,6 +141,27 @@ impl ProcessManager {
                     }
                 }
             }
+
+            let stdout = child.stdout.take().unwrap();
+            let stderr = child.stderr.take().unwrap();
+            
+            let log_store_out = log_store.clone();
+            let server_id_out = server_id.clone();
+            let mut stdout_reader = BufReader::new(stdout).lines();
+            tokio::spawn(async move {
+                while let Ok(Some(line)) = stdout_reader.next_line().await {
+                    log_store_out.append_log(&server_id_out, line).await;
+                }
+            });
+
+            let log_store_err = log_store.clone();
+            let server_id_err = server_id.clone();
+            let mut stderr_reader = BufReader::new(stderr).lines();
+            tokio::spawn(async move {
+                while let Ok(Some(line)) = stderr_reader.next_line().await {
+                    log_store_err.append_log(&server_id_err, line).await;
+                }
+            });
 
             // Wait for child to exit or stop signal
             let mut manually_stopped = false;
@@ -225,7 +253,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_process_manager() {
-        let pm = ProcessManager::new();
+        let log_store = Arc::new(LogStore::new());
+        let pm = ProcessManager::new(log_store);
         assert!(pm.get_status("test").await.is_none());
     }
 
