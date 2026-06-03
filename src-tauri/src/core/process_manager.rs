@@ -29,32 +29,17 @@ impl ProcessManager {
         let mut procs = self.processes.lock().await;
         
         if let Some(proc) = procs.get(&server.id) {
-            if proc.status.status == Status::Running || proc.status.status == Status::Starting {
+            if proc.status.status == Status::Running || proc.status.status == Status::Starting || proc.status.status == Status::Reconnecting {
                 return Ok(());
             }
         }
-
-        let args = SshCommandBuilder::build_args(server);
-        
-        let mut cmd = Command::new("ssh");
-        cmd.args(args);
-        cmd.stdout(Stdio::piped());
-        cmd.stderr(Stdio::piped());
-        
-        #[cfg(target_os = "windows")]
-        {
-            cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
-        }
-
-        let mut child = cmd.spawn().map_err(|e| format!("Failed to start ssh: {}", e))?;
-        let pid = child.id();
 
         let active_tunnels = server.tunnels.iter().filter(|t| t.enabled).count();
 
         let status = ServerRuntimeStatus {
             server_id: server.id.clone(),
-            status: Status::Running,
-            pid,
+            status: Status::Starting,
+            pid: None,
             started_at: Some(Utc::now().to_rfc3339()),
             uptime_sec: 0,
             restart_count: 0,
@@ -62,7 +47,7 @@ impl ProcessManager {
             active_tunnel_count: active_tunnels,
         };
 
-        let (stop_tx, mut stop_rx) = oneshot::channel();
+        let (stop_tx, stop_rx) = oneshot::channel();
         
         procs.insert(server.id.clone(), ManagedProcess {
             status: status.clone(),
@@ -70,31 +55,143 @@ impl ProcessManager {
         });
 
         let procs_clone = self.processes.clone();
-        let server_id = server.id.clone();
+        let server_clone = server.clone();
         
         tokio::spawn(async move {
-            tokio::select! {
-                _ = child.wait() => {
-                    let mut p = procs_clone.lock().await;
-                    if let Some(proc) = p.get_mut(&server_id) {
-                        proc.status.status = Status::Stopped;
-                        proc.status.pid = None;
-                        proc.stop_tx = None;
-                    }
-                }
-                _ = &mut stop_rx => {
-                    let _ = child.kill().await;
-                    let mut p = procs_clone.lock().await;
-                    if let Some(proc) = p.get_mut(&server_id) {
-                        proc.status.status = Status::Stopped;
-                        proc.status.pid = None;
-                        proc.stop_tx = None;
-                    }
-                }
-            }
+            Self::run_process_loop(procs_clone, server_clone, stop_rx).await;
         });
 
         Ok(())
+    }
+
+    async fn run_process_loop(procs: Arc<Mutex<HashMap<String, ManagedProcess>>>, server: ServerConfig, mut stop_rx: oneshot::Receiver<()>) {
+        let server_id = server.id.clone();
+        let mut restart_count = 0;
+
+        loop {
+            // Update status to starting or reconnecting
+            {
+                let mut p = procs.lock().await;
+                if let Some(proc) = p.get_mut(&server_id) {
+                    if restart_count > 0 {
+                        proc.status.status = Status::Reconnecting;
+                    } else {
+                        proc.status.status = Status::Starting;
+                    }
+                    proc.status.restart_count = restart_count;
+                }
+            }
+
+            let args = SshCommandBuilder::build_args(&server);
+            let mut cmd = Command::new("ssh");
+            cmd.args(args);
+            cmd.stdout(Stdio::piped());
+            cmd.stderr(Stdio::piped());
+            
+            #[cfg(target_os = "windows")]
+            {
+                cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+            }
+
+            let spawn_result = cmd.spawn();
+            
+            let mut child = match spawn_result {
+                Ok(c) => c,
+                Err(e) => {
+                    let mut p = procs.lock().await;
+                    if let Some(proc) = p.get_mut(&server_id) {
+                        proc.status.status = Status::Error;
+                        proc.status.last_error = Some(format!("Failed to spawn: {}", e));
+                    }
+                    // Wait before retry if auto_reconnect
+                    if server.auto_reconnect {
+                        let delay = calculate_backoff(restart_count + 1, server.reconnect_delay_sec);
+                        let sleep = tokio::time::sleep(tokio::time::Duration::from_secs(delay));
+                        tokio::pin!(sleep);
+                        tokio::select! {
+                            _ = &mut sleep => {
+                                restart_count += 1;
+                                continue;
+                            }
+                            _ = &mut stop_rx => {
+                                break;
+                            }
+                        }
+                    } else {
+                        break;
+                    }
+                }
+            };
+
+            let pid = child.id();
+            {
+                let mut p = procs.lock().await;
+                if let Some(proc) = p.get_mut(&server_id) {
+                    proc.status.status = Status::Running;
+                    proc.status.pid = pid;
+                    if restart_count == 0 {
+                        proc.status.started_at = Some(Utc::now().to_rfc3339());
+                    }
+                }
+            }
+
+            // Wait for child to exit or stop signal
+            let mut manually_stopped = false;
+            tokio::select! {
+                _ = child.wait() => {
+                    // Child exited
+                }
+                _ = &mut stop_rx => {
+                    let _ = child.kill().await;
+                    manually_stopped = true;
+                }
+            }
+
+            if manually_stopped {
+                let mut p = procs.lock().await;
+                if let Some(proc) = p.get_mut(&server_id) {
+                    proc.status.status = Status::Stopped;
+                    proc.status.pid = None;
+                    proc.stop_tx = None;
+                }
+                break;
+            }
+
+            // Child exited on its own
+            if server.auto_reconnect {
+                {
+                    let mut p = procs.lock().await;
+                    if let Some(proc) = p.get_mut(&server_id) {
+                        proc.status.status = Status::Error;
+                        proc.status.pid = None;
+                    }
+                }
+                let delay = calculate_backoff(restart_count + 1, server.reconnect_delay_sec);
+                let sleep = tokio::time::sleep(tokio::time::Duration::from_secs(delay));
+                tokio::pin!(sleep);
+                tokio::select! {
+                    _ = &mut sleep => {
+                        restart_count += 1;
+                    }
+                    _ = &mut stop_rx => {
+                        let mut p = procs.lock().await;
+                        if let Some(proc) = p.get_mut(&server_id) {
+                            proc.status.status = Status::Stopped;
+                            proc.stop_tx = None;
+                        }
+                        break;
+                    }
+                }
+            } else {
+                let mut p = procs.lock().await;
+                if let Some(proc) = p.get_mut(&server_id) {
+                    proc.status.status = Status::Stopped;
+                    proc.status.pid = None;
+                    proc.stop_tx = None;
+                }
+                break;
+            }
+        }
     }
 
     pub async fn stop_server(&self, server_id: &str) -> Result<(), String> {
@@ -114,6 +211,14 @@ impl ProcessManager {
     }
 }
 
+pub fn calculate_backoff(restart_count: u32, base_delay: u32) -> u64 {
+    if restart_count == 0 {
+        return base_delay as u64;
+    }
+    let delay = (base_delay as u64) * 2u64.pow(restart_count - 1);
+    std::cmp::min(delay, 60)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -122,5 +227,16 @@ mod tests {
     async fn test_process_manager() {
         let pm = ProcessManager::new();
         assert!(pm.get_status("test").await.is_none());
+    }
+
+    #[test]
+    fn test_calculate_backoff() {
+        assert_eq!(calculate_backoff(0, 5), 5); // Although normally retry starts at 1, if 0 it's 5
+        assert_eq!(calculate_backoff(1, 5), 5); // 1st retry
+        assert_eq!(calculate_backoff(2, 5), 10); // 2nd retry
+        assert_eq!(calculate_backoff(3, 5), 20); // 3rd retry
+        assert_eq!(calculate_backoff(4, 5), 40); // 4th retry
+        assert_eq!(calculate_backoff(5, 5), 60); // 5th retry -> capped at 60
+        assert_eq!(calculate_backoff(10, 5), 60); // 10th retry -> capped at 60
     }
 }

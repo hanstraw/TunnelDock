@@ -74,3 +74,17 @@ impl Default for ConfigFile {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_app_config_defaults() {
+        let config = ConfigFile::default();
+        assert_eq!(config.app.start_minimized, true);
+        assert_eq!(config.app.close_to_tray, true);
+        assert_eq!(config.app.launch_at_login, true);
+        assert_eq!(config.app.theme, "system");
+    }
+}
