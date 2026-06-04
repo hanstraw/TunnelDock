@@ -40,6 +40,7 @@
 }
 
 * { box-sizing: border-box; }
+html, body, #root { height: 100%; overflow: hidden; }
 body { margin: 0; background: var(--bg); color: var(--text); }
 button, select, input { font: inherit; }
 button { cursor: pointer; border: 1px solid var(--border); background: var(--panel); color: var(--text); border-radius: 7px; min-height: 34px; padding: 0 12px; transition: 160ms ease; }
@@ -47,14 +48,14 @@ button:hover:not(:disabled) { border-color: var(--primary); color: var(--primary
 button:disabled { opacity: .48; cursor: not-allowed; }
 select { min-height: 34px; border: 1px solid var(--border); border-radius: 8px; padding: 0 10px; background: var(--panel); color: var(--text); }
 
-.app-shell { min-height: 100vh; display: grid; grid-template-columns: 190px 1fr; grid-template-rows: 1fr 34px; background: var(--bg); }
-.app-sidebar { grid-row: 1 / 3; display: flex; flex-direction: column; border-right: 1px solid var(--border); background: var(--sidebar-bg); }
-.sidebar { flex: 1; display: flex; flex-direction: column; padding: 14px 10px 0; }
+.app-shell { height: 100vh; display: grid; grid-template-columns: 190px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) 34px; background: var(--bg); overflow: hidden; }
+.app-sidebar { grid-row: 1 / 3; display: flex; flex-direction: column; min-height: 0; overflow: hidden; border-right: 1px solid var(--border); background: var(--sidebar-bg); }
+.sidebar { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 14px 10px 0; overflow: hidden; }
 .sidebar-header { display: flex; align-items: center; justify-content: space-between; padding: 0 4px 14px; }
 .sidebar-header h2 { margin: 0; font-size: 15px; }
 .icon-button { width: 32px; min-height: 32px; padding: 0; font-size: 0; line-height: 1; }
 .icon-button::before { content: "+"; font-size: 22px; }
-.server-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; }
+.server-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; overflow: hidden; }
 .server-list-item { display: flex; gap: 10px; align-items: flex-start; padding: 10px 10px; border: 1px solid transparent; border-radius: 8px; cursor: pointer; }
 .server-list-item:hover { background: var(--sidebar-hover); }
 .server-list-item.active { background: var(--sidebar-active); border-color: #a9ceff; box-shadow: inset 3px 0 0 var(--primary); }
@@ -70,7 +71,7 @@ select { min-height: 34px; border: 1px solid var(--border); border-radius: 8px; 
 .compact-controls { grid-template-columns: 1fr; }
 .sidebar-controls label { grid-column: 1 / 3; display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--muted); }
 
-.app-main { padding: 18px 18px 14px; overflow: auto; }
+.app-main { min-width: 0; min-height: 0; padding: 18px 18px 14px; overflow: auto; }
 .server-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
 .title-area h1 { margin: 0 0 7px; font-size: 22px; letter-spacing: -0.03em; }
 .meta-row { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 13px; flex-wrap: wrap; }
@@ -120,7 +121,7 @@ select { min-height: 34px; border: 1px solid var(--border); border-radius: 8px; 
 .logs-card pre { margin: 12px 0 0; min-height: 330px; background: var(--log-bg); color: var(--log-text); padding: 14px; border-radius: 8px; overflow: auto; font: 12px/1.55 Consolas, "Cascadia Mono", monospace; white-space: pre-wrap; }
 .empty-state { color: var(--muted); min-height: 240px; display: grid; place-items: center; }
 
-.statusbar { grid-column: 2; height: 34px; border-top: 1px solid var(--border); background: var(--panel); display: flex; align-items: center; gap: 18px; padding: 0 18px; color: var(--muted); font-size: 12px; }
+.statusbar { grid-column: 2; min-width: 0; height: 34px; overflow: hidden; border-top: 1px solid var(--border); background: var(--panel); display: flex; align-items: center; gap: 18px; padding: 0 18px; color: var(--muted); font-size: 12px; }
 .statusbar span:last-child { margin-left: auto; }
 
 .dialog-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.45); display: flex; align-items: center; justify-content: center; z-index: 1000; }
