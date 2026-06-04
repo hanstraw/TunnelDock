@@ -5,11 +5,12 @@ interface ServerEditDialogProps {
   server?: ServerConfig;
   onSave: (server: ServerConfig) => void;
   onCancel: () => void;
+  embedded?: boolean;
 }
 
 const createId = () => (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `server-${Date.now()}`);
 
-export const ServerEditDialog: React.FC<ServerEditDialogProps> = ({ server, onSave, onCancel }) => {
+export const ServerEditDialog: React.FC<ServerEditDialogProps> = ({ server, onSave, onCancel, embedded = false }) => {
   const [formData, setFormData] = useState<ServerConfig>(server || {
     id: createId(),
     name: '新服务器',
@@ -42,25 +43,26 @@ export const ServerEditDialog: React.FC<ServerEditDialogProps> = ({ server, onSa
     setFormData(prev => ({ ...prev, privateKey: `${userProfile}\\.ssh\\${fileName}` }));
   };
 
-  return (
-    <div className="dialog-overlay">
-      <div className="dialog">
+  const form = (
+    <>
         <h2>{server ? '编辑服务器' : '添加服务器'}</h2>
-        <div className="form-group">
-          <label htmlFor="server-name">服务器名称</label>
-          <input id="server-name" name="name" value={formData.name} onChange={handleChange} />
-        </div>
-        <div className="form-group">
-          <label htmlFor="ssh-host">SSH 地址</label>
-          <input id="ssh-host" name="sshHost" value={formData.sshHost} onChange={handleChange} />
-        </div>
-        <div className="form-group">
-          <label htmlFor="ssh-port">SSH 端口</label>
-          <input id="ssh-port" type="number" name="sshPort" min="1" max="65535" value={formData.sshPort} onChange={handleChange} />
-        </div>
-        <div className="form-group">
-          <label htmlFor="ssh-user">用户名</label>
-          <input id="ssh-user" name="sshUser" value={formData.sshUser} onChange={handleChange} />
+        <div className="server-form-grid">
+          <div className="form-group">
+            <label htmlFor="server-name">服务器名称</label>
+            <input id="server-name" name="name" value={formData.name} onChange={handleChange} />
+          </div>
+          <div className="form-group">
+            <label htmlFor="ssh-host">SSH 地址</label>
+            <input id="ssh-host" name="sshHost" value={formData.sshHost} onChange={handleChange} />
+          </div>
+          <div className="form-group">
+            <label htmlFor="ssh-port">SSH 端口</label>
+            <input id="ssh-port" type="number" name="sshPort" min="1" max="65535" value={formData.sshPort} onChange={handleChange} />
+          </div>
+          <div className="form-group">
+            <label htmlFor="ssh-user">用户名</label>
+            <input id="ssh-user" name="sshUser" value={formData.sshUser} onChange={handleChange} />
+          </div>
         </div>
         <div className="form-group">
           <label htmlFor="private-key">私钥路径</label>
@@ -88,6 +90,17 @@ export const ServerEditDialog: React.FC<ServerEditDialogProps> = ({ server, onSa
           <button onClick={onCancel}>取消</button>
           <button className="primary" onClick={save}>保存</button>
         </div>
+    </>
+  );
+
+  if (embedded) {
+    return <section className="server-edit-page">{form}</section>;
+  }
+
+  return (
+    <div className="dialog-overlay">
+      <div className="dialog">
+        {form}
       </div>
     </div>
   );

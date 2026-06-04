@@ -115,7 +115,7 @@ select { min-height: 34px; border: 1px solid var(--border); border-radius: 8px; 
 .table-actions button { width: 32px; min-height: 30px; padding: 0; font-size: 12px; }
 .danger-icon { color: var(--danger); }
 .empty-cell { text-align: center; color: var(--muted); padding: 54px 16px !important; }
-.info-card, .logs-card, .empty-state, .settings-page, .about-page { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 24px; box-shadow: var(--shadow); }
+.info-card, .logs-card, .empty-state, .settings-page, .about-page, .server-edit-page { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 20px; box-shadow: var(--shadow); }
 .info-card p { margin: 0 0 12px; display: flex; gap: 18px; }
 .info-card strong { min-width: 96px; color: var(--muted); }
 .logs-card pre { margin: 12px 0 0; min-height: 330px; background: var(--log-bg); color: var(--log-text); padding: 14px; border-radius: 8px; overflow: auto; font: 12px/1.55 Consolas, "Cascadia Mono", monospace; white-space: pre-wrap; }
@@ -125,11 +125,14 @@ select { min-height: 34px; border: 1px solid var(--border); border-radius: 8px; 
 .statusbar span:last-child { margin-left: auto; }
 
 .dialog-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.45); display: flex; align-items: center; justify-content: center; z-index: 1000; }
-.dialog { width: min(520px, calc(100vw - 36px)); background: var(--panel); color: var(--text); padding: 22px; border-radius: 12px; box-shadow: 0 20px 70px rgba(15, 23, 42, 0.28); }
+.dialog { width: min(520px, calc(100vw - 36px)); max-height: calc(100vh - 36px); overflow: auto; background: var(--panel); color: var(--text); padding: 22px; border-radius: 12px; box-shadow: 0 20px 70px rgba(15, 23, 42, 0.28); }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+.server-edit-page { max-width: 760px; margin: 0 auto; }
+.server-edit-page h2, .dialog h2 { margin: 0 0 16px; font-size: 22px; }
+.server-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 14px; }
 .form-group { margin-bottom: 14px; display: flex; flex-direction: column; gap: 6px; text-align: left; }
 .form-group.checkbox { flex-direction: row; align-items: center; }
-.form-group input { min-height: 36px; border: 1px solid var(--border); border-radius: 8px; padding: 0 10px; background: var(--panel); color: var(--text); }
+.form-group input { min-height: 34px; border: 1px solid var(--border); border-radius: 8px; padding: 0 10px; background: var(--panel); color: var(--text); }
 .form-group small { color: var(--muted); line-height: 1.45; }
 .input-with-button { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
 .quick-paths { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -152,4 +155,5 @@ button.danger { background: var(--danger); color: white; border-color: var(--dan
   .sidebar-footer { display: none; }
   .statusbar { grid-column: 1; }
   .server-header { flex-direction: column; }
+  .server-form-grid { grid-template-columns: 1fr; }
 }

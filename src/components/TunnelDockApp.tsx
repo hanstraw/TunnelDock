@@ -10,7 +10,7 @@ import { ServerEditDialog } from './ServerEditDialog';
 import { TunnelEditDialog } from './TunnelEditDialog';
 
 type Language = 'zh' | 'en';
-type MainView = 'server' | 'settings' | 'about';
+type MainView = 'server' | 'settings' | 'about' | 'server-edit';
 
 const dict = {
   zh: {
@@ -119,6 +119,7 @@ export const TunnelDockApp: React.FC = () => {
   const handleSaveServer = async (server: ServerConfig) => {
     if (editingServer) await TauriApi.updateServer(server); else await TauriApi.createServer(server);
     setSelectedServerId(server.id);
+    setMainView('server');
     setShowServerEdit(false);
     setEditingServer(undefined);
     loadServers();
@@ -187,7 +188,7 @@ export const TunnelDockApp: React.FC = () => {
   return (
     <div className="app-shell">
       <aside className="app-sidebar">
-        <Sidebar servers={servers} selectedServerId={selectedServerId} onSelectServer={(s) => { setSelectedServerId(s.id); setMainView('server'); }} onAddServer={() => { setEditingServer(undefined); setShowServerEdit(true); }} onShowSettings={() => setMainView('settings')} onShowAbout={() => setMainView('about')} labels={t} runningServerIds={runningServerIds} />
+        <Sidebar servers={servers} selectedServerId={selectedServerId} onSelectServer={(s) => { setSelectedServerId(s.id); setMainView('server'); }} onAddServer={() => { setEditingServer(undefined); setMainView('server-edit'); }} onShowSettings={() => setMainView('settings')} onShowAbout={() => setMainView('about')} labels={t} runningServerIds={runningServerIds} />
         <div className="sidebar-controls compact-controls">
           <label>
             {t.language}
@@ -232,9 +233,12 @@ export const TunnelDockApp: React.FC = () => {
             <div className="about-version">{t.version}</div>
           </section>
         )}
+        {mainView === 'server-edit' && (
+          <ServerEditDialog embedded server={editingServer} onSave={handleSaveServer} onCancel={() => { setEditingServer(undefined); setMainView(selectedServerId ? 'server' : 'settings'); }} />
+        )}
         {mainView === 'server' && selectedServer ? (
           <>
-            <ServerHeader server={selectedServer} status={selectedStatus} onStart={handleStart} onStop={handleStop} onRestart={handleRestart} onDelete={handleDelete} onEdit={() => { setEditingServer(selectedServer); setShowServerEdit(true); }} labels={t} />
+            <ServerHeader server={selectedServer} status={selectedStatus} onStart={handleStart} onStop={handleStop} onRestart={handleRestart} onDelete={handleDelete} onEdit={() => { setEditingServer(selectedServer); setMainView('server-edit'); }} labels={t} />
             {actionError && <div className="action-error">{t.error}: {actionError}</div>}
             <nav className="tabs">
               <button className={activeTab === 'tunnels' ? 'active' : ''} onClick={() => setActiveTab('tunnels')}>{t.tabs.tunnels}</button>
