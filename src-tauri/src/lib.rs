@@ -52,8 +52,8 @@ pub fn run() {
         .setup(move |app| {
             // Read config
             let config = {
-                let store = tokio::task::block_in_place(|| {
-                    tokio::runtime::Handle::current().block_on(async { config_store.lock().await.load_config() })
+                let store = tauri::async_runtime::block_on(async {
+                    config_store.lock().await.load_config()
                 }).unwrap_or_default();
                 store
             };
@@ -170,8 +170,8 @@ pub fn run() {
                 let app = window.app_handle();
                 let config_store = app.state::<AppState>().config_store.clone();
                 let close_to_tray = {
-                    let store = tokio::task::block_in_place(|| {
-                        tokio::runtime::Handle::current().block_on(async { config_store.lock().await.load_config() })
+                    let store = tauri::async_runtime::block_on(async {
+                        config_store.lock().await.load_config()
                     }).unwrap_or_default();
                     store.app.close_to_tray
                 };
