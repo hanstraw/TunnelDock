@@ -26,6 +26,11 @@ describe('TunnelDockApp', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
+    vi.useRealTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('loads and displays servers', async () => {
@@ -170,4 +175,36 @@ describe('TunnelDockApp', () => {
     fireEvent.click(screen.getByText('停止'));
     expect(TauriApi.stopServer).toHaveBeenCalledWith('1');
   });
+
+  it('keeps polling status after start until server leaves starting state', async () => {
+    vi.mocked(TauriApi.getServers).mockResolvedValue([
+      {
+        id: '1',
+        name: 'My Test Server',
+        sshHost: 'host',
+        sshPort: 22,
+        sshUser: 'root',
+        useAgent: true,
+        autoStart: false,
+        autoReconnect: false,
+        reconnectDelaySec: 5,
+        enabled: true,
+        tunnels: [],
+      }
+    ]);
+    vi.mocked(TauriApi.getServerStatus)
+      .mockResolvedValueOnce({ serverId: '1', status: 'stopped', uptimeSec: 0, restartCount: 0, activeTunnelCount: 0 })
+      .mockResolvedValueOnce({ serverId: '1', status: 'starting', uptimeSec: 0, restartCount: 0, activeTunnelCount: 0 })
+      .mockResolvedValue({ serverId: '1', status: 'running', uptimeSec: 1, restartCount: 0, activeTunnelCount: 0 });
+    vi.mocked(TauriApi.startServer).mockResolvedValue(undefined);
+
+    render(<TunnelDockApp />);
+
+    await waitFor(() => expect(screen.getAllByText('My Test Server').length).toBeGreaterThan(0));
+    fireEvent.click(screen.getByText('启动'));
+
+    await waitFor(() => expect(screen.getByText('启动中')).toBeInTheDocument());
+
+    await waitFor(() => expect(screen.getAllByText('已连接').length).toBeGreaterThan(0), { timeout: 3000 });
+  }, 5000);
 });

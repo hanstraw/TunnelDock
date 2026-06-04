@@ -49,6 +49,7 @@ export const TunnelDockApp: React.FC = () => {
   const [showTunnelEdit, setShowTunnelEdit] = useState(false);
   const [editingTunnel, setEditingTunnel] = useState<TunnelConfig | undefined>();
   const [confirmDelete, setConfirmDelete] = useState<{type: 'server' | 'tunnel', item: ServerConfig | TunnelConfig} | null>(null);
+  const [actionError, setActionError] = useState<string>();
 
   const t = dict[language];
 
@@ -66,7 +67,12 @@ export const TunnelDockApp: React.FC = () => {
     }
   };
 
-  useEffect(() => { if (selectedServerId) loadStatus(selectedServerId); }, [selectedServerId]);
+  useEffect(() => {
+    if (!selectedServerId) return;
+    loadStatus(selectedServerId);
+    const timer = setInterval(() => loadStatus(selectedServerId), 2000);
+    return () => clearInterval(timer);
+  }, [selectedServerId]);
 
   const loadStatus = async (serverId: string) => {
     try {
@@ -82,9 +88,20 @@ export const TunnelDockApp: React.FC = () => {
   const runningServerIds = useMemo(() => new Set(Object.values(statuses).filter(s => s.status === 'running').map(s => s.serverId)), [statuses]);
   const runningCount = Object.values(statuses).filter(s => s.status === 'running').length;
 
-  const handleStart = async () => { if (selectedServerId) { await TauriApi.startServer(selectedServerId); loadStatus(selectedServerId); } };
-  const handleStop = async () => { if (selectedServerId) { await TauriApi.stopServer(selectedServerId); loadStatus(selectedServerId); } };
-  const handleRestart = async () => { if (selectedServerId) { await TauriApi.restartServer(selectedServerId); loadStatus(selectedServerId); } };
+  const runServerAction = async (action: (serverId: string) => Promise<void>) => {
+    if (!selectedServerId) return;
+    setActionError(undefined);
+    try {
+      await action(selectedServerId);
+      await loadStatus(selectedServerId);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  const handleStart = () => runServerAction(TauriApi.startServer);
+  const handleStop = () => runServerAction(TauriApi.stopServer);
+  const handleRestart = () => runServerAction(TauriApi.restartServer);
   const handleDelete = () => { if (selectedServer) setConfirmDelete({ type: 'server', item: selectedServer }); };
 
   const executeDeleteServer = async (server: ServerConfig) => {
@@ -189,6 +206,7 @@ export const TunnelDockApp: React.FC = () => {
         {selectedServer ? (
           <>
             <ServerHeader server={selectedServer} status={selectedStatus} onStart={handleStart} onStop={handleStop} onRestart={handleRestart} onDelete={handleDelete} onEdit={() => { setEditingServer(selectedServer); setShowServerEdit(true); }} labels={t} />
+            {actionError && <div className="action-error">{t.error}: {actionError}</div>}
             <nav className="tabs">
               <button className={activeTab === 'tunnels' ? 'active' : ''} onClick={() => setActiveTab('tunnels')}>{t.tabs.tunnels}</button>
               <button className={activeTab === 'info' ? 'active' : ''} onClick={() => setActiveTab('info')}>{t.tabs.info}</button>

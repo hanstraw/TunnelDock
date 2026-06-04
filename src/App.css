@@ -68,6 +68,7 @@ select { min-height: 34px; border: 1px solid var(--border); border-radius: 8px; 
 .status-starting, .status-reconnecting { background: #faad14; }
 .meta-separator { width: 1px; height: 16px; background: var(--border); }
 .actions { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+.action-error { margin: -10px 0 16px; padding: 10px 12px; border: 1px solid #ffccc7; background: #fff2f0; color: #a8071a; border-radius: 8px; }
 .primary { border-color: #7fb8ff; color: var(--primary); background: #f6fbff; font-weight: 700; }
 .danger-soft { border-color: #ffb3b5; color: var(--danger); background: #fff8f8; font-weight: 700; }
 .icon-danger { color: var(--danger); min-width: 50px; }
