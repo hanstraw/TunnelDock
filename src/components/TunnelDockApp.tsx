@@ -242,7 +242,7 @@ export const TunnelDockApp: React.FC = () => {
               <button className={activeTab === 'logs' ? 'active' : ''} onClick={() => setActiveTab('logs')}>{t.tabs.logs}</button>
             </nav>
 
-            {activeTab === 'tunnels' && <TunnelTable tunnels={selectedServer.tunnels || []} labels={t.table} onAdd={() => { setEditingTunnel(undefined); setShowTunnelEdit(true); }} onEdit={(tunnel) => { setEditingTunnel(tunnel); setShowTunnelEdit(true); }} onDelete={(tunnel) => setConfirmDelete({ type: 'tunnel', item: tunnel })} onToggle={handleToggleTunnel} onOpenUrl={(url) => TauriApi.openUrl(url)} />}
+            {activeTab === 'tunnels' && <TunnelTable tunnels={selectedServer.tunnels || []} serverRunning={selectedStatus?.status === 'running'} labels={t.table} onAdd={() => { setEditingTunnel(undefined); setShowTunnelEdit(true); }} onEdit={(tunnel) => { setEditingTunnel(tunnel); setShowTunnelEdit(true); }} onDelete={(tunnel) => setConfirmDelete({ type: 'tunnel', item: tunnel })} onToggle={handleToggleTunnel} onOpenUrl={(url) => TauriApi.openUrl(url)} />}
             {activeTab === 'info' && <section className="info-card"><p><strong>{t.host}</strong>{selectedServer.sshHost}</p><p><strong>{t.port}</strong>{selectedServer.sshPort}</p><p><strong>{t.user}</strong>{selectedServer.sshUser}</p><p><strong>{t.privateKey}</strong>{selectedServer.privateKey || 'ssh-agent / 默认密钥'}</p></section>}
             {activeTab === 'logs' && <section className="logs-card"><button onClick={() => selectedServerId && TauriApi.clearLogs(selectedServerId).then(() => loadLogs(selectedServerId))}>{t.clearLogs}</button><pre>{logs.join('\n')}</pre></section>}
           </>

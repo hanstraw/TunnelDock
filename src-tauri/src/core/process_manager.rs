@@ -52,6 +52,7 @@ impl ProcessManager {
         }
 
         let active_tunnels = server.tunnels.iter().filter(|t| t.enabled).count();
+        self.log_store.append_log(&server.id, format!("准备启动 SSH 隧道：{} 个启用隧道", active_tunnels)).await;
 
         let status = ServerRuntimeStatus {
             server_id: server.id.clone(),
@@ -102,6 +103,7 @@ impl ProcessManager {
             }
 
             let args = SshCommandBuilder::build_args(&server);
+            log_store.append_log(&server_id, format!("启动 ssh.exe，参数：{}", args.join(" "))).await;
             let mut cmd = Command::new("ssh");
             cmd.args(args);
             cmd.stdout(Stdio::piped());
@@ -161,6 +163,7 @@ impl ProcessManager {
                     }
                 }
             }
+            log_store.append_log(&server_id, format!("SSH 进程已启动，PID：{:?}", pid)).await;
 
             let stdout = child.stdout.take().unwrap();
             let stderr = child.stderr.take().unwrap();
@@ -221,19 +224,22 @@ impl ProcessManager {
 
             // Child exited on its own
             if server.auto_reconnect {
+                let delay = calculate_backoff(restart_count + 1, server.reconnect_delay_sec);
                 {
                     let mut p = procs.lock().await;
                     if let Some(proc) = p.get_mut(&server_id) {
-                        proc.status.status = Status::Error;
+                        proc.status.status = Status::Reconnecting;
                         proc.status.pid = None;
+                        proc.status.last_error = Some(format!("SSH 进程已退出，{} 秒后自动重连", delay));
                     }
                 }
-                let delay = calculate_backoff(restart_count + 1, server.reconnect_delay_sec);
+                log_store.append_log(&server_id, format!("SSH 进程已退出，{} 秒后自动重连", delay)).await;
                 let sleep = tokio::time::sleep(tokio::time::Duration::from_secs(delay));
                 tokio::pin!(sleep);
                 tokio::select! {
                     _ = &mut sleep => {
                         restart_count += 1;
+                        log_store.append_log(&server_id, format!("开始第 {} 次自动重连", restart_count)).await;
                     }
                     _ = &mut stop_rx => {
                         let mut p = procs.lock().await;
@@ -245,6 +251,7 @@ impl ProcessManager {
                     }
                 }
             } else {
+                log_store.append_log(&server_id, "SSH 进程已退出，自动重连未启用".to_string()).await;
                 let mut p = procs.lock().await;
                 if let Some(proc) = p.get_mut(&server_id) {
                     proc.status.status = Status::Stopped;

@@ -48,10 +48,32 @@ impl LogStore {
     }
 
     pub async fn get_logs(&self, server_id: &str) -> Vec<String> {
-        let logs = self.logs.read().await;
-        logs.get(server_id)
-            .map(|l| l.iter().cloned().collect())
-            .unwrap_or_default()
+        {
+            let logs = self.logs.read().await;
+            if let Some(lines) = logs.get(server_id) {
+                return lines.iter().cloned().collect();
+            }
+        }
+
+        let mut file_path = self.log_dir.clone();
+        file_path.push(format!("{}.log", server_id));
+        let Ok(content) = tokio::fs::read_to_string(&file_path).await else {
+            return Vec::new();
+        };
+
+        let lines: Vec<String> = content
+            .lines()
+            .rev()
+            .take(MAX_LINES)
+            .collect::<Vec<_>>()
+            .into_iter()
+            .rev()
+            .map(str::to_string)
+            .collect();
+
+        let mut logs = self.logs.write().await;
+        logs.insert(server_id.to_string(), VecDeque::from(lines.clone()));
+        lines
     }
 
     pub async fn clear_logs(&self, server_id: &str) {
@@ -83,5 +105,18 @@ mod tests {
         store.clear_logs("test1").await;
         let logs = store.get_logs("test1").await;
         assert_eq!(logs.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_get_logs_reads_existing_file_when_memory_is_empty() {
+        let store = LogStore::new();
+        store.clear_logs("test-file-read").await;
+        store.append_log("test-file-read", "persisted line".to_string()).await;
+
+        let second_store = LogStore::new();
+        let logs = second_store.get_logs("test-file-read").await;
+
+        assert!(logs.contains(&"persisted line".to_string()));
+        second_store.clear_logs("test-file-read").await;
     }
 }

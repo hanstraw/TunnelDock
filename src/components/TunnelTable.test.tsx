@@ -62,4 +62,11 @@ describe('TunnelTable', () => {
     fireEvent.click(openBtn);
     expect(handleOpen).toHaveBeenCalledWith('http://localhost:9090');
   });
+
+  it('shows enabled tunnels as stopped when server is not running', () => {
+    render(<TunnelTable tunnels={mockTunnels} serverRunning={false} onAdd={() => {}} onEdit={() => {}} onDelete={() => {}} onToggle={() => {}} onOpenUrl={() => {}} />);
+
+    expect(screen.getAllByText('Stopped').length).toBe(2);
+    expect(screen.queryByText('Connected')).not.toBeInTheDocument();
+  });
 });
