@@ -4,7 +4,7 @@
 
 TunnelDock is a lightweight Windows tray app for managing multiple SSH local port-forwarding tunnels.
 
-![TunnelDock 主界面](doc/ui设计图.png)
+![TunnelDock 主界面](doc/d1fd6c72-f18f-445e-a864-269bb1504bab.png)
 
 ## 核心特性
 
@@ -110,9 +110,11 @@ src-tauri/target/release/bundle/msi/
 
 ```powershell
 ssh.exe -N `
-  -o ServerAliveInterval=30 `
-  -o ServerAliveCountMax=3 `
+  -v `
+  -o ServerAliveInterval=10 `
+  -o ServerAliveCountMax=2 `
   -o ExitOnForwardFailure=yes `
+  -o TCPKeepAlive=yes `
   -o BatchMode=yes `
   -i "C:\Users\you\.ssh\id_ed25519" `
   -L 127.0.0.1:18000:127.0.0.1:8000 `
@@ -231,4 +233,4 @@ TunnelDock 目前是 Windows 优先的本地桌面应用。macOS / Linux 适配�
 
 ## License
 
-如果你计划开源，请在仓库中补充 `LICENSE` 文件。
+TunnelDock 使用 MIT License 开源，详见 [LICENSE](LICENSE)。
