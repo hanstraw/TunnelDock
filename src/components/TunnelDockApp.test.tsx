@@ -114,6 +114,31 @@ describe('TunnelDockApp', () => {
     });
   });
 
+  it('opens settings and about pages from sidebar', async () => {
+    vi.mocked(TauriApi.getServers).mockResolvedValue([]);
+    render(<TunnelDockApp />);
+
+    await waitFor(() => expect(screen.getByRole('button', { name: /设置/ })).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: /设置/ }));
+    expect(screen.getByRole('heading', { name: '应用设置' })).toBeInTheDocument();
+    expect(screen.getByText('配置工具')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /关于/ }));
+    expect(screen.getByRole('heading', { name: '关于 TunnelDock' })).toBeInTheDocument();
+  });
+
+  it('fills a common private key path in server dialog', async () => {
+    vi.mocked(TauriApi.getServers).mockResolvedValue([]);
+
+    render(<TunnelDockApp />);
+
+    await waitFor(() => expect(screen.getByLabelText('添加服务器')).toBeInTheDocument());
+    fireEvent.click(screen.getByLabelText('添加服务器'));
+    fireEvent.click(screen.getByText('id_ed25519'));
+
+    await waitFor(() => expect(screen.getByLabelText('私钥路径')).toHaveValue('C:\\Users\\<你的用户名>\\.ssh\\id_ed25519'));
+  });
+
   it('can start/stop a server', async () => {
     vi.mocked(TauriApi.getServers).mockResolvedValue([
       {

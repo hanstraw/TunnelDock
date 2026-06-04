@@ -6,6 +6,8 @@ interface SidebarProps {
   selectedServerId?: string;
   onSelectServer: (server: ServerConfig) => void;
   onAddServer: () => void;
+  onShowSettings?: () => void;
+  onShowAbout?: () => void;
   labels?: {
     servers: string;
     addServer: string;
@@ -17,7 +19,7 @@ interface SidebarProps {
   runningServerIds?: Set<string>;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ servers, selectedServerId, onSelectServer, onAddServer, labels, runningServerIds }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ servers, selectedServerId, onSelectServer, onAddServer, onShowSettings, onShowAbout, labels, runningServerIds }) => {
   const text = labels ?? { servers: 'Servers', addServer: '+ Add Server', connected: 'Connected', disconnected: 'Disconnected', settings: 'Settings', about: 'About' };
   const runningIds = runningServerIds ?? new Set<string>();
   return (
@@ -42,8 +44,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ servers, selectedServerId, onS
         ))}
       </ul>
       <div className="sidebar-footer">
-        <button className="side-link">⚙ {text.settings}</button>
-        <button className="side-link">ⓘ {text.about}</button>
+        <button className="side-link" onClick={onShowSettings}>⚙ {text.settings}</button>
+        <button className="side-link" onClick={onShowAbout}>ⓘ {text.about}</button>
       </div>
     </div>
   );

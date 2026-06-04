@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{Mutex, oneshot};
 use tokio::process::Command;
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use std::process::Stdio;
 use tokio::io::{AsyncBufReadExt, BufReader};
 
@@ -269,7 +269,20 @@ impl ProcessManager {
 
     pub async fn get_status(&self, server_id: &str) -> Option<ServerRuntimeStatus> {
         let procs = self.processes.lock().await;
-        procs.get(server_id).map(|p| p.status.clone())
+        procs.get(server_id).map(|p| {
+            let mut status = p.status.clone();
+            if matches!(status.status, Status::Running | Status::Starting | Status::Reconnecting) {
+                if let Some(started_at) = &status.started_at {
+                    if let Ok(started_at) = DateTime::parse_from_rfc3339(started_at) {
+                        status.uptime_sec = Utc::now()
+                            .signed_duration_since(started_at.with_timezone(&Utc))
+                            .num_seconds()
+                            .max(0) as u64;
+                    }
+                }
+            }
+            status
+        })
     }
 }
 
@@ -290,6 +303,34 @@ mod tests {
         let log_store = Arc::new(LogStore::new());
         let pm = ProcessManager::new(log_store);
         assert!(pm.get_status("test").await.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_get_status_updates_uptime() {
+        let log_store = Arc::new(LogStore::new());
+        let pm = ProcessManager::new(log_store);
+        let started_at = (Utc::now() - chrono::Duration::seconds(75)).to_rfc3339();
+
+        {
+            let mut processes = pm.processes.lock().await;
+            processes.insert("server-1".to_string(), ManagedProcess {
+                status: ServerRuntimeStatus {
+                    server_id: "server-1".to_string(),
+                    status: Status::Running,
+                    pid: Some(1),
+                    started_at: Some(started_at),
+                    uptime_sec: 0,
+                    restart_count: 0,
+                    last_error: None,
+                    failure_reason: None,
+                    active_tunnel_count: 1,
+                },
+                stop_tx: None,
+            });
+        }
+
+        let status = pm.get_status("server-1").await.unwrap();
+        assert!(status.uptime_sec >= 70, "uptime should be calculated dynamically");
     }
 
     #[test]

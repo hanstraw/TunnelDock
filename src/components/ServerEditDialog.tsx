@@ -37,6 +37,11 @@ export const ServerEditDialog: React.FC<ServerEditDialogProps> = ({ server, onSa
     onSave({ ...formData, privateKey: formData.privateKey?.trim() || undefined });
   };
 
+  const useDefaultPrivateKey = (fileName: string) => {
+    const userProfile = 'C:\\Users\\<你的用户名>';
+    setFormData(prev => ({ ...prev, privateKey: `${userProfile}\\.ssh\\${fileName}` }));
+  };
+
   return (
     <div className="dialog-overlay">
       <div className="dialog">
@@ -59,7 +64,16 @@ export const ServerEditDialog: React.FC<ServerEditDialogProps> = ({ server, onSa
         </div>
         <div className="form-group">
           <label htmlFor="private-key">私钥路径</label>
-          <input id="private-key" name="privateKey" value={formData.privateKey || ''} onChange={handleChange} placeholder="C:\\Users\\you\\.ssh\\id_ed25519" />
+          <div className="input-with-button">
+            <input id="private-key" name="privateKey" value={formData.privateKey || ''} onChange={handleChange} placeholder="C:\\Users\\you\\.ssh\\id_ed25519" />
+            <button type="button" onClick={() => useDefaultPrivateKey('id_ed25519')}>默认路径</button>
+          </div>
+          <div className="quick-paths">
+            <button type="button" onClick={() => useDefaultPrivateKey('id_ed25519')}>id_ed25519</button>
+            <button type="button" onClick={() => useDefaultPrivateKey('id_rsa')}>id_rsa</button>
+            <button type="button" onClick={() => setFormData(prev => ({ ...prev, privateKey: '' }))}>使用 ssh-agent</button>
+          </div>
+          <small>不会保存密码或 passphrase；仅保存私钥文件路径。也可以留空使用 ssh-agent。</small>
         </div>
         <div className="form-group checkbox">
           <label><input type="checkbox" name="useAgent" checked={formData.useAgent} onChange={handleChange} /> 使用 ssh-agent</label>
