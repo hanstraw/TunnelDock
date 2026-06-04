@@ -8,23 +8,41 @@ interface TunnelTableProps {
   onDelete: (tunnel: TunnelConfig) => void;
   onToggle: (tunnelId: string, enabled: boolean) => void;
   onOpenUrl: (url: string) => void;
+  labels?: {
+    tunnels: string;
+    addTunnel: string;
+    enabled: string;
+    name: string;
+    local: string;
+    remote: string;
+    status: string;
+    actions: string;
+    connected: string;
+    stopped: string;
+    open: string;
+    edit: string;
+    delete: string;
+    empty: string;
+  };
 }
 
-export const TunnelTable: React.FC<TunnelTableProps> = ({ tunnels, onAdd, onEdit, onDelete, onToggle, onOpenUrl }) => {
+export const TunnelTable: React.FC<TunnelTableProps> = ({ tunnels, onAdd, onEdit, onDelete, onToggle, onOpenUrl, labels }) => {
+  const text = labels ?? { tunnels: 'Tunnels', addTunnel: 'Add Tunnel', enabled: 'Enabled', name: 'Name', local: 'Local', remote: 'Remote', status: 'Status', actions: 'Actions', connected: 'Connected', stopped: 'Stopped', open: 'Open', edit: 'Edit', delete: 'Delete', empty: 'No tunnels configured.' };
   return (
     <div className="tunnel-table-container">
       <div className="table-header">
-        <h3>Tunnels</h3>
-        <button onClick={onAdd}>Add Tunnel</button>
+        <h3>{text.tunnels}</h3>
+        <button className="secondary" onClick={onAdd}>{text.addTunnel}</button>
       </div>
       <table className="tunnel-table">
         <thead>
           <tr>
-            <th>Enabled</th>
-            <th>Name</th>
-            <th>Local</th>
-            <th>Remote</th>
-            <th>Actions</th>
+            <th>{text.enabled}</th>
+            <th>{text.name}</th>
+            <th>{text.local}</th>
+            <th>{text.remote}</th>
+            <th>{text.status}</th>
+            <th>{text.actions}</th>
           </tr>
         </thead>
         <tbody>
@@ -33,6 +51,7 @@ export const TunnelTable: React.FC<TunnelTableProps> = ({ tunnels, onAdd, onEdit
               <td>
                 <input 
                   type="checkbox" 
+                  className="toggle"
                   checked={tunnel.enabled} 
                   onChange={(e) => onToggle(tunnel.id, e.target.checked)} 
                 />
@@ -40,16 +59,17 @@ export const TunnelTable: React.FC<TunnelTableProps> = ({ tunnels, onAdd, onEdit
               <td>{tunnel.name}</td>
               <td>{`${tunnel.localHost}:${tunnel.localPort}`}</td>
               <td>{`${tunnel.remoteHost}:${tunnel.remotePort}`}</td>
-              <td>
-                <button onClick={() => onEdit(tunnel)}>Edit</button>
-                <button onClick={() => onDelete(tunnel)} className="danger">Delete</button>
-                {tunnel.openUrl && <button onClick={() => onOpenUrl(tunnel.openUrl!)}>Open</button>}
+              <td><span className={`row-status ${tunnel.enabled ? 'running' : 'stopped'}`}>{tunnel.enabled ? text.connected : text.stopped}</span></td>
+              <td className="table-actions">
+                {tunnel.openUrl && <button aria-label={text.open} onClick={() => onOpenUrl(tunnel.openUrl!)}>{text.open}</button>}
+                <button aria-label={text.edit} onClick={() => onEdit(tunnel)}>{text.edit}</button>
+                <button aria-label={text.delete} onClick={() => onDelete(tunnel)} className="danger-icon">{text.delete}</button>
               </td>
             </tr>
           ))}
           {tunnels.length === 0 && (
             <tr>
-              <td colSpan={5}>No tunnels configured.</td>
+              <td colSpan={6} className="empty-cell">{text.empty}</td>
             </tr>
           )}
         </tbody>

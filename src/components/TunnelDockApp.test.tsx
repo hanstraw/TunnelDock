@@ -23,6 +23,7 @@ vi.mock('../api/tauri', () => ({
 describe('TunnelDockApp', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
   });
 
   it('loads and displays servers', async () => {
@@ -61,9 +62,25 @@ describe('TunnelDockApp', () => {
     // Header and TunnelTable should be visible
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: 'My Test Server' })).toBeInTheDocument();
-      expect(screen.getByRole('heading', { name: 'Tunnels' })).toBeInTheDocument();
-      expect(screen.getByText('running')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: '隧道列表' })).toBeInTheDocument();
+      expect(screen.getAllByText('已连接').length).toBeGreaterThan(0);
     });
+  });
+
+  it('defaults to Chinese UI and can switch to English', async () => {
+    vi.mocked(TauriApi.getServers).mockResolvedValue([]);
+
+    render(<TunnelDockApp />);
+
+    await waitFor(() => {
+      expect(screen.getByText('服务器列表')).toBeInTheDocument();
+      expect(screen.getByText('请选择或新增一个服务器。')).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByLabelText('语言'), { target: { value: 'en' } });
+
+    expect(screen.getByText('Servers')).toBeInTheDocument();
+    expect(screen.getByText('Select or add a server.')).toBeInTheDocument();
   });
 
   it('can start/stop a server', async () => {
@@ -99,10 +116,10 @@ describe('TunnelDockApp', () => {
     fireEvent.click(screen.getAllByText('My Test Server')[0]);
     
     await waitFor(() => {
-      expect(screen.getByText('Start')).toBeInTheDocument();
+      expect(screen.getByText('启动')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByText('Start'));
+    fireEvent.click(screen.getByText('启动'));
     expect(TauriApi.startServer).toHaveBeenCalledWith('1');
 
     unmount();
@@ -121,10 +138,10 @@ describe('TunnelDockApp', () => {
     });
     fireEvent.click(screen.getAllByText('My Test Server')[0]);
     await waitFor(() => {
-      expect(screen.getByText('Stop')).toBeInTheDocument();
+      expect(screen.getByText('停止')).toBeInTheDocument();
     });
     
-    fireEvent.click(screen.getByText('Stop'));
+    fireEvent.click(screen.getByText('停止'));
     expect(TauriApi.stopServer).toHaveBeenCalledWith('1');
   });
 });

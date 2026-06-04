@@ -59,11 +59,11 @@ pub fn run() {
             };
 
             // Setup tray menu
-            let show_i = MenuItem::with_id(app, "show", "Show Main Window", true, None::<&str>)?;
-            let start_all_i = MenuItem::with_id(app, "start_all", "Start All", true, None::<&str>)?;
-            let stop_all_i = MenuItem::with_id(app, "stop_all", "Stop All", true, None::<&str>)?;
-            let settings_i = MenuItem::with_id(app, "settings", "Settings", true, None::<&str>)?;
-            let quit_i = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+            let show_i = MenuItem::with_id(app, "show", "打开主界面", true, None::<&str>)?;
+            let start_all_i = MenuItem::with_id(app, "start_all", "全部启动", true, None::<&str>)?;
+            let stop_all_i = MenuItem::with_id(app, "stop_all", "全部停止", true, None::<&str>)?;
+            let settings_i = MenuItem::with_id(app, "settings", "设置", true, None::<&str>)?;
+            let quit_i = MenuItem::with_id(app, "quit", "退出", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show_i, &start_all_i, &stop_all_i, &settings_i, &quit_i])?;
 
             let _tray = TrayIconBuilder::new()
@@ -156,8 +156,10 @@ pub fn run() {
             let args: Vec<String> = std::env::args().collect();
             let has_minimized_flag = args.contains(&"--minimized".to_string());
             
-            if !config.app.start_minimized && !has_minimized_flag {
-                if let Some(window) = app.get_webview_window("main") {
+            if let Some(window) = app.get_webview_window("main") {
+                if config.app.start_minimized || has_minimized_flag {
+                    window.hide().unwrap();
+                } else {
                     window.show().unwrap();
                     window.set_focus().unwrap();
                 }
