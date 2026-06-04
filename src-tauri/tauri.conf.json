@@ -13,10 +13,10 @@
     "windows": [
       {
         "title": "SSH 隧道管理器",
-        "width": 1200,
-        "height": 790,
-        "minWidth": 980,
-        "minHeight": 650,
+        "width": 900,
+        "height": 600,
+        "minWidth": 820,
+        "minHeight": 540,
         "visible": true
       }
     ],

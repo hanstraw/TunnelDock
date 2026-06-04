@@ -31,7 +31,9 @@ const formatUptime = (seconds?: number) => {
   const days = Math.floor(total / 86400);
   const hours = Math.floor((total % 86400) / 3600);
   const minutes = Math.floor((total % 3600) / 60);
-  return `${days} 天 ${hours} 小时 ${minutes} 分钟`;
+  const secs = total % 60;
+  if (days > 0) return `${days} 天 ${hours} 小时 ${minutes} 分钟 ${secs} 秒`;
+  return [hours, minutes, secs].map(value => String(value).padStart(2, '0')).join(':');
 };
 
 export const ServerHeader: React.FC<ServerHeaderProps> = ({ server, status, onStart, onStop, onRestart, onDelete, onEdit, labels }) => {

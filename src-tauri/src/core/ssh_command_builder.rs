@@ -5,13 +5,16 @@ pub struct SshCommandBuilder;
 impl SshCommandBuilder {
     pub fn build_args(server: &ServerConfig) -> Vec<String> {
         let mut args = vec![
+            "-v".to_string(),
             "-N".to_string(),
             "-o".to_string(),
-            "ServerAliveInterval=30".to_string(),
+            "ServerAliveInterval=10".to_string(),
             "-o".to_string(),
-            "ServerAliveCountMax=3".to_string(),
+            "ServerAliveCountMax=2".to_string(),
             "-o".to_string(),
             "ExitOnForwardFailure=yes".to_string(),
+            "-o".to_string(),
+            "TCPKeepAlive=yes".to_string(),
             "-o".to_string(),
             "BatchMode=yes".to_string(),
         ];
@@ -89,10 +92,12 @@ mod tests {
         let args = SshCommandBuilder::build_args(&server);
         
         let expected = vec![
+            "-v",
             "-N",
-            "-o", "ServerAliveInterval=30",
-            "-o", "ServerAliveCountMax=3",
+            "-o", "ServerAliveInterval=10",
+            "-o", "ServerAliveCountMax=2",
             "-o", "ExitOnForwardFailure=yes",
+            "-o", "TCPKeepAlive=yes",
             "-o", "BatchMode=yes",
             "-i", "C:\\key",
             "-L", "127.0.0.1:8080:127.0.0.1:80",

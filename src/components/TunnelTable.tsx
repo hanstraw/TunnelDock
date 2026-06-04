@@ -38,12 +38,12 @@ export const TunnelTable: React.FC<TunnelTableProps> = ({ tunnels, onAdd, onEdit
       <table className="tunnel-table">
         <thead>
           <tr>
-            <th>{text.enabled}</th>
-            <th>{text.name}</th>
-            <th>{text.local}</th>
-            <th>{text.remote}</th>
-            <th>{text.status}</th>
-            <th>{text.actions}</th>
+            <th className="col-enabled">{text.enabled}</th>
+            <th className="col-name">{text.name}</th>
+            <th className="col-endpoint">{text.local}</th>
+            <th className="col-endpoint">{text.remote}</th>
+            <th className="col-status">{text.status}</th>
+            <th className="col-actions">{text.actions}</th>
           </tr>
         </thead>
         <tbody>
@@ -58,9 +58,9 @@ export const TunnelTable: React.FC<TunnelTableProps> = ({ tunnels, onAdd, onEdit
                   onChange={(e) => onToggle(tunnel.id, e.target.checked)} 
                 />
               </td>
-              <td>{tunnel.name}</td>
-              <td>{`${tunnel.localHost}:${tunnel.localPort}`}</td>
-              <td>{`${tunnel.remoteHost}:${tunnel.remotePort}`}</td>
+              <td className="tunnel-name">{tunnel.name}</td>
+              <td className="endpoint-cell">{`${tunnel.localHost}:${tunnel.localPort}`}</td>
+              <td className="endpoint-cell">{`${tunnel.remoteHost}:${tunnel.remotePort}`}</td>
               <td><span className={`row-status ${tunnel.enabled && serverRunning ? 'running' : 'stopped'}`}>{tunnel.enabled && serverRunning ? text.connected : text.stopped}</span></td>
               <td className="table-actions">
                 {tunnel.openUrl && <button aria-label={text.open} onClick={() => onOpenUrl(tunnel.openUrl!)}>{text.open}</button>}
