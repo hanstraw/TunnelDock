@@ -11,6 +11,8 @@ vi.mock('../api/tauri', () => ({
     stopServer: vi.fn(),
     restartServer: vi.fn(),
     deleteServer: vi.fn(),
+    createServer: vi.fn(),
+    updateServer: vi.fn(),
     saveServer: vi.fn(),
     getLogs: vi.fn(),
     clearLogs: vi.fn(),
@@ -81,6 +83,30 @@ describe('TunnelDockApp', () => {
 
     expect(screen.getByText('Servers')).toBeInTheDocument();
     expect(screen.getByText('Select or add a server.')).toBeInTheDocument();
+  });
+
+  it('shows Chinese server dialog and saves a server', async () => {
+    vi.mocked(TauriApi.getServers).mockResolvedValue([]);
+    vi.mocked(TauriApi.createServer).mockResolvedValue(undefined);
+
+    render(<TunnelDockApp />);
+
+    await waitFor(() => expect(screen.getByText('服务器列表')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByLabelText('添加服务器'));
+    expect(screen.getByRole('heading', { name: '添加服务器' })).toBeInTheDocument();
+    expect(screen.getByLabelText('服务器名称')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('保存'));
+
+    await waitFor(() => {
+      expect(TauriApi.createServer).toHaveBeenCalledWith(expect.objectContaining({
+        name: '新服务器',
+        sshHost: 'example.com',
+        sshPort: 22,
+        sshUser: 'root',
+      }));
+    });
   });
 
   it('can start/stop a server', async () => {

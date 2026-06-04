@@ -14,8 +14,8 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({ title, message, on
         <h2>{title}</h2>
         <p>{message}</p>
         <div className="dialog-actions">
-          <button onClick={onCancel}>Cancel</button>
-          <button className="danger" onClick={onConfirm}>Confirm</button>
+          <button onClick={onCancel}>取消</button>
+          <button className="danger" onClick={onConfirm}>确认</button>
         </div>
       </div>
     </div>

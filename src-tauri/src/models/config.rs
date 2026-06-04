@@ -65,9 +65,9 @@ impl Default for ConfigFile {
         Self {
             version: 1,
             app: AppConfig {
-                start_minimized: true,
+                start_minimized: false,
                 close_to_tray: true,
-                launch_at_login: true,
+                launch_at_login: false,
                 theme: "system".to_string(),
             },
             servers: vec![],
@@ -82,9 +82,9 @@ mod tests {
     #[test]
     fn test_app_config_defaults() {
         let config = ConfigFile::default();
-        assert_eq!(config.app.start_minimized, true);
+        assert_eq!(config.app.start_minimized, false);
         assert_eq!(config.app.close_to_tray, true);
-        assert_eq!(config.app.launch_at_login, true);
+        assert_eq!(config.app.launch_at_login, false);
         assert_eq!(config.app.theme, "system");
     }
 }

@@ -88,6 +88,25 @@ describe('ServerHeader', () => {
     expect(onDelete).toHaveBeenCalled();
   });
 
+  it('uses Chinese labels when provided', () => {
+    render(<ServerHeader
+      server={mockServer}
+      status={{ serverId: 'server1', status: 'stopped', uptimeSec: 0, restartCount: 0, activeTunnelCount: 0 }}
+      onStart={() => {}}
+      onStop={() => {}}
+      onRestart={() => {}}
+      onDelete={() => {}}
+      onEdit={() => {}}
+      labels={{
+        start: '启动', stop: '停止', restart: '重连', edit: '编辑', delete: '删除', uptime: '运行时间', connected: '已连接', starting: '启动中', stopped: '已停止', stopping: '停止中', error: '异常', reconnecting: '重连中',
+        failureReasons: { portOccupied: '端口被占用', sshMissing: '未找到 ssh.exe', hostKeyIssue: '主机密钥异常', connectionFailed: '连接失败', unknown: '未知错误' },
+      }}
+    />);
+
+    expect(screen.getByText('已停止')).toBeInTheDocument();
+    expect(screen.getByText('启动')).toBeInTheDocument();
+  });
+
   it('calls start/stop/restart handlers', () => {
     const handleStart = vi.fn();
     const handleStop = vi.fn();
